@@ -89,74 +89,175 @@ section{padding:0 16px}.card{background:rgba(15,28,45,.78);border:1px solid rgba
 </div>
 
 <script>
-const KEY='ma_vie_final_v1';
-let data=JSON.parse(localStorage.getItem(KEY)||'{"works":[{"name":"Porte de garage","icon":"🚪","status":"prep"},{"name":"Jardin","icon":"🌳","status":"prep"},{"name":"Chambre Chloé","icon":"💡","status":"prep"}],"history":[],"checks":{},"stats":{"gym":0,"walk":0,"guitar":0,"streak":0},"weights":[{"date":"2026-11-03","value":118}]}');
-data.weights = Array.isArray(data.weights) ? data.weights : [{date:"2026-11-03",value:118}];
-const save=()=>localStorage.setItem(KEY,JSON.stringify(data));
-function dateFR(){return new Intl.DateTimeFormat('fr-FR',{weekday:'long',day:'numeric',month:'long',year:'numeric'}).format(new Date())}
-document.getElementById('date').textContent=dateFR().replace(/^./,c=>c.toUpperCase());
-function workLabel(s){return s==='prep'?'PRÉPARATION':s==='doing'?'EN COURS':'TERMINÉ'}
-function renderWorks(){
- const active=data.works.filter(x=>x.status!=='done');
- document.getElementById('works').innerHTML=active.length?active.map((x,i)=>`<div class="task"><span class="ico">${x.icon}</span><div class="txt"><b>${esc(x.name)}</b><small>${workLabel(x.status)}</small></div><button class="btn ${x.status==='prep'?'':''}" onclick="cycleWork(${data.works.indexOf(x)})">${x.status==='prep'?'🟠':x.status==='doing'?'🔴':'🟢'}</button></div>`).join(''):'<div class="empty">Aucun travail en cours.</div>';
- document.getElementById('history').innerHTML=data.history.length?data.history.slice().reverse().map(x=>`<div class="task"><span class="ico">${x.icon}</span><div class="txt"><b>${esc(x.name)}</b><small>Terminé le ${x.date}</small></div><span class="pill donepill">TERMINÉ</span></div>`).join(''):'<div class="empty">Aucun travail terminé.</div>';
- document.getElementById('workMini').innerHTML=active.slice(0,3).map(x=>`<div class="task"><span class="ico">${x.icon}</span><div class="txt"><b>${esc(x.name)}</b></div><span class="pill ${x.status==='prep'?'prep':'doing'}">${workLabel(x.status)}</span></div>`).join('')||'<div class="empty">Rien à signaler.</div>';
-}
-function cycleWork(i){let x=data.works[i]; if(x.status==='prep')x.status='doing'; else {x.status='done';data.history.push({...x,date:new Intl.DateTimeFormat('fr-FR').format(new Date())});data.works.splice(i,1)} save();renderWorks();}
-function addWork(){let n=prompt('Nom du travail à ajouter :');if(!n)return;let icon=prompt('Emoji (facultatif) :','🛠');data.works.push({name:n.trim(),icon:icon||'🛠',status:'prep'});save();renderWorks();}
-function esc(s){return s.replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]))}
+const KEY = 'ma_vie_v21';
+const DEFAULT = {
+  works:[
+    {name:'Porte de garage',icon:'🚪',status:'prep'},
+    {name:'Jardin',icon:'🌳',status:'prep'},
+    {name:'Chambre Chloé',icon:'💡',status:'prep'}
+  ],
+  history:[],
+  checks:{},
+  stats:{gym:0,walk:0,guitar:0,streak:0},
+  weights:[{date:'2026-11-05',value:118}],
+  weightGoal:108,
+  stepSize:4
+};
 
-function weightDateFR(d){return new Intl.DateTimeFormat('fr-FR',{day:'2-digit',month:'2-digit',year:'numeric'}).format(new Date(d+'T12:00:00'))}
-function daysSince(a,b){return Math.floor((new Date(b+'T12:00:00')-new Date(a+'T12:00:00'))/86400000)}
-function canWeigh(){
- const last=data.weights.length?data.weights[data.weights.length-1]:null;
- if(!last)return true;
- const today=new Date().toISOString().slice(0,10);
- return daysSince(last.date,today)>=14;
+function loadData(){
+  try{
+    const raw=localStorage.getItem(KEY);
+    if(!raw) return structuredClone(DEFAULT);
+    const d=JSON.parse(raw);
+    return {
+      ...structuredClone(DEFAULT), ...d,
+      works:Array.isArray(d.works)?d.works:structuredClone(DEFAULT.works),
+      history:Array.isArray(d.history)?d.history:[],
+      checks:d.checks||{},
+      stats:{...DEFAULT.stats,...(d.stats||{})},
+      weights:Array.isArray(d.weights)&&d.weights.length?d.weights:structuredClone(DEFAULT.weights),
+      weightGoal:Number(d.weightGoal)||108,
+      stepSize:Number(d.stepSize)||4
+    };
+  }catch(e){ return structuredClone(DEFAULT); }
+}
+let data=loadData();
+function save(){localStorage.setItem(KEY,JSON.stringify(data));}
+function today(){return new Date().toISOString().slice(0,10);}
+function fmtDate(s){return new Intl.DateTimeFormat('fr-FR',{day:'2-digit',month:'2-digit',year:'numeric'}).format(new Date(s+'T12:00:00'));}
+function esc(s){return String(s).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]));}
+function daysBetween(a,b){return Math.floor((new Date(b+'T12:00:00')-new Date(a+'T12:00:00'))/86400000);}
+
+function renderWorks(){
+  const active=data.works.filter(x=>x.status!=='done');
+  const el=document.getElementById('works');
+  el.innerHTML=active.length?active.map(x=>{
+    const i=data.works.indexOf(x);
+    const label=x.status==='prep'?'PRÉPARATION':'EN COURS';
+    const icon=x.status==='prep'?'🟠':'🔴';
+    return `<div class="task"><span class="ico">${x.icon}</span><div class="txt"><b>${esc(x.name)}</b><small>${label}</small></div><button class="btn" onclick="cycleWork(${i})">${icon}</button></div>`;
+  }).join(''):'<div class="empty">Aucun travail en cours.</div>';
+
+  document.getElementById('history').innerHTML=data.history.length?
+    data.history.slice().reverse().map(x=>`<div class="task"><span class="ico">${x.icon}</span><div class="txt"><b>${esc(x.name)}</b><small>Terminé le ${x.date}</small></div><span class="pill donepill">TERMINÉ</span></div>`).join(''):
+    '<div class="empty">Aucun travail terminé.</div>';
+
+  document.getElementById('workMini').innerHTML=active.slice(0,3).map(x=>
+    `<div class="task"><span class="ico">${x.icon}</span><div class="txt"><b>${esc(x.name)}</b></div><span class="pill ${x.status==='prep'?'prep':'doing'}">${x.status==='prep'?'PRÉPA':'EN COURS'}</span></div>`
+  ).join('')||'<div class="empty">Rien à signaler.</div>';
+}
+function cycleWork(i){
+  const x=data.works[i];
+  if(!x)return;
+  if(x.status==='prep') x.status='doing';
+  else {
+    data.history.push({name:x.name,icon:x.icon,date:fmtDate(today())});
+    data.works.splice(i,1);
+  }
+  save();renderWorks();
+}
+function addWork(){
+  const n=prompt('Nom du travail à ajouter :');
+  if(!n||!n.trim())return;
+  const icon=prompt('Emoji (facultatif) :','🛠')||'🛠';
+  data.works.push({name:n.trim(),icon,status:'prep'});
+  save();renderWorks();
+}
+
+function renderDaily(){
+  const d=today();
+  const c=data.checks[d]||{};
+  const items=[
+    ['💊','Prendre mes 3 cachets','med'],
+    ['🚴','Cardio / Basic-Fit','gym'],
+    ['🚶','Marche 1 h','walk'],
+    ['🎸','Guitare 30–60 min','guitar'],
+    ['🧠','Culture / apprentissage','culture'],
+    ['🔎','Remise en question — 5 min','reflect']
+  ];
+  const make=items.map(([i,t,k])=>
+    `<div class="task"><span class="ico">${i}</span><div class="txt"><b>${t}</b></div><button class="check ${c[k]?'done':''}" onclick="toggleCheck('${k}')">${c[k]?'✓':''}</button></div>`
+  ).join('');
+  document.getElementById('daily').innerHTML=make;
+  document.getElementById('todayTasks').innerHTML=items.map(([i,t,k])=>
+    `<div class="task"><span class="ico">${i}</span><div class="txt"><b>${t}</b></div><span class="pill ${c[k]?'donepill':'prep'}">${c[k]?'FAIT':'À FAIRE'}</span></div>`
+  ).join('');
+}
+function toggleCheck(k){
+  const d=today();
+  data.checks[d]=data.checks[d]||{};
+  const next=!data.checks[d][k];
+  data.checks[d][k]=next;
+  if(next && ['gym','walk','guitar'].includes(k)) data.stats[k]++;
+  if(!next && ['gym','walk','guitar'].includes(k)) data.stats[k]=Math.max(0,data.stats[k]-1);
+  save();renderDaily();renderStats();
+}
+function renderStats(){
+  document.getElementById('streak').textContent=data.stats.streak;
+  document.getElementById('gym').textContent=data.stats.gym;
+  document.getElementById('walk').textContent=data.stats.walk;
+  document.getElementById('g2').textContent=data.stats.gym;
+  document.getElementById('gu2').textContent=data.stats.guitar;
+}
+
+function nextGoal(current){
+  const final=data.weightGoal;
+  const step=data.stepSize;
+  if(current<=final)return final;
+  return Math.max(final,current-step);
 }
 function renderWeight(){
- const latest=data.weights[data.weights.length-1]||{value:118,date:""};
- document.getElementById('currentWeight').textContent=latest.value.toLocaleString('fr-FR',{maximumFractionDigits:1});
- const pct=Math.max(0,Math.min(100,((118-latest.value)/10)*100));
- document.getElementById('weightbar').style.width=pct+'%';
- const today=new Date().toISOString().slice(0,10);
- const allowed=canWeigh();
- document.getElementById('weighingInfo').textContent=allowed
-   ? 'Pesée autorisée aujourd’hui.'
-   : 'Prochaine pesée le '+weightDateFR(new Date(new Date(latest.date+'T12:00:00').getTime()+14*86400000).toISOString().slice(0,10))+'.';
- document.getElementById('weightInput').disabled=!allowed;
- document.getElementById('weightInput').style.opacity=allowed?'1':'.5';
- const h=data.weights.slice().reverse();
- document.getElementById('weightHistory').innerHTML=h.length?h.map((x,i)=>{
-   const prev=h[i+1];
-   let delta='';
-   if(prev){const d=x.value-prev.value;delta=`<span class="${d<=0?'delta-down':'delta-up'}">${d>0?'+':''}${d.toLocaleString('fr-FR',{maximumFractionDigits:1})} kg</span>`}
-   return `<div class="weight-row"><span><b>${x.value.toLocaleString('fr-FR',{maximumFractionDigits:1})} kg</b><small class="muted"> · ${weightDateFR(x.date)}</small></span>${delta}</div>`
- }).join(''):'<div class="empty">Aucune pesée enregistrée.</div>';
+  const latest=data.weights[data.weights.length-1];
+  const current=Number(latest.value);
+  const final=Number(data.weightGoal);
+  const first=118;
+  const progress=Math.max(0,Math.min(100,((first-current)/(first-final))*100));
+  document.getElementById('currentWeight').textContent=current.toLocaleString('fr-FR',{maximumFractionDigits:1});
+  document.getElementById('weightbar').style.width=progress+'%';
+
+  const target=nextGoal(current);
+  const reached=current<=target;
+  document.getElementById('weighingInfo').innerHTML=
+    `🎯 Prochaine étape : <b>${target.toLocaleString('fr-FR',{maximumFractionDigits:1})} kg</b>`+
+    (current<=final?' · 🏆 Objectif final atteint !':' · Objectif final : '+final.toLocaleString('fr-FR',{maximumFractionDigits:1})+' kg');
+
+  const allowed=daysBetween(latest.date,today())>=14;
+  const input=document.getElementById('weightInput');
+  input.disabled=!allowed;
+  input.style.opacity=allowed?'1':'.5';
+  document.getElementById('weightError').textContent=allowed?'Pesée autorisée aujourd’hui.':'Prochaine pesée : '+fmtDate(new Date(new Date(latest.date+'T12:00:00').getTime()+14*86400000).toISOString().slice(0,10))+'.';
+
+  const hist=data.weights.slice().reverse();
+  document.getElementById('weightHistory').innerHTML=hist.map((x,i)=>{
+    const prev=hist[i+1];
+    let delta='';
+    if(prev){
+      const d=x.value-prev.value;
+      delta=`<span class="${d<=0?'delta-down':'delta-up'}">${d>0?'+':''}${d.toLocaleString('fr-FR',{maximumFractionDigits:1})} kg</span>`;
+    }
+    return `<div class="weight-row"><span><b>${Number(x.value).toLocaleString('fr-FR',{maximumFractionDigits:1})} kg</b><small class="muted"> · ${fmtDate(x.date)}</small></span>${delta}</div>`;
+  }).join('');
 }
 function saveWeight(){
- const err=document.getElementById('weightError'); err.textContent='';
- if(!canWeigh()){err.textContent='La pesée est limitée à une fois tous les 14 jours.';return;}
- const raw=document.getElementById('weightInput').value.replace(',','.');
- const value=Number(raw);
- if(!value || value<50 || value>250){err.textContent='Entre un poids valide (50 à 250 kg).';return;}
- const today=new Date().toISOString().slice(0,10);
- data.weights.push({date:today,value:Number(value.toFixed(1))});
- data.weights.sort((a,b)=>a.date.localeCompare(b.date));
- save();document.getElementById('weightInput').value='';renderWeight();
+  const input=document.getElementById('weightInput');
+  const err=document.getElementById('weightError');
+  err.textContent='';
+  const latest=data.weights[data.weights.length-1];
+  if(daysBetween(latest.date,today())<14){err.textContent='La pesée est limitée à une fois tous les 14 jours.';return;}
+  const v=Number(String(input.value).replace(',','.'));
+  if(!v||v<50||v>250){err.textContent='Entre un poids valide entre 50 et 250 kg.';return;}
+  data.weights.push({date:today(),value:Number(v.toFixed(1))});
+  data.weights.sort((a,b)=>a.date.localeCompare(b.date));
+  save();input.value='';renderWeight();
 }
-function renderDaily(){
- let d=new Date().toISOString().slice(0,10);let c=data.checks[d]||{};
- const items=[['💊','Prendre mes 3 cachets','med'],['🚴','Cardio / Basic-Fit','gym'],['🚶','Marche 1 h','walk'],['🎸','Guitare 30–60 min','guitar'],['🧠','Culture / apprentissage','culture'],['🔎','Remise en question — 5 min','reflect']];
- document.getElementById('daily').innerHTML=items.map(([i,t,k])=>`<div class="task"><span class="ico">${i}</span><div class="txt"><b>${t}</b></div><button class="check ${c[k]?'done':''}" onclick="toggle('${k}')">${c[k]?'✓':''}</button></div>`).join('');
- document.getElementById('todayTasks').innerHTML=items.map(([i,t,k])=>`<div class="task"><span class="ico">${i}</span><div class="txt"><b>${t}</b></div><span class="pill ${c[k]?'donepill':'prep'}">${c[k]?'FAIT':'À FAIRE'}</span></div>`).join('');
-}
-function toggle(k){let d=new Date().toISOString().slice(0,10);data.checks[d]=data.checks[d]||{};data.checks[d][k]=!data.checks[d][k];if(k==='gym'&&data.checks[d][k])data.stats.gym++;if(k==='walk'&&data.checks[d][k])data.stats.walk++;if(k==='guitar'&&data.checks[d][k])data.stats.guitar++;save();renderDaily();document.getElementById('gym').textContent=data.stats.gym;document.getElementById('walk').textContent=data.stats.walk;document.getElementById('g2').textContent=data.stats.gym;document.getElementById('gu2').textContent=data.stats.guitar;}
-document.querySelectorAll('.tab').forEach(b=>b.onclick=()=>{document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));document.querySelectorAll('.page').forEach(x=>x.classList.remove('active'));b.classList.add('active');document.getElementById(b.dataset.page).classList.add('active')});
-renderWorks();renderDaily();renderWeight();document.getElementById('streak').textContent=data.stats.streak;document.getElementById('gym').textContent=data.stats.gym;document.getElementById('walk').textContent=data.stats.walk;document.getElementById('g2').textContent=data.stats.gym;document.getElementById('gu2').textContent=data.stats.guitar;
 
-function connectGoogle(){
- alert("La connexion Google Calendar nécessite une clé OAuth Google (Client ID) propre à cette application. La prochaine étape consiste à configurer cette autorisation ; je ne vais pas simuler une connexion qui ne fonctionne pas.");
-}
+document.querySelectorAll('.tab').forEach(b=>b.addEventListener('click',()=>{
+  document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));
+  document.querySelectorAll('.page').forEach(x=>x.classList.remove('active'));
+  b.classList.add('active');document.getElementById(b.dataset.page).classList.add('active');
+}));
+
+document.getElementById('date').textContent=new Intl.DateTimeFormat('fr-FR',{weekday:'long',day:'numeric',month:'long',year:'numeric'}).format(new Date()).replace(/^./,c=>c.toUpperCase());
+renderWorks();renderDaily();renderStats();renderWeight();
 </script>
 </body></html>
