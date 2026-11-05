@@ -27,7 +27,10 @@ section{padding:0 16px}.card{background:rgba(15,28,45,.78);border:1px solid rgba
 .inputrow{display:flex;gap:8px;margin-top:10px}.inputrow input{flex:1;background:#081522;border:1px solid #263b51;color:#fff;border-radius:12px;padding:11px}.empty{color:#71869d;text-align:center;padding:20px;font-size:13px}
 .pill{padding:5px 8px;border-radius:9px;font-size:10px;font-weight:900}.prep{background:#4a3415;color:#ffcf76}.doing{background:#4a2025;color:#ff929b}.donepill{background:#173d35;color:#7fe2be}
 .footer{text-align:center;color:#536980;font-size:10px;padding:20px}
-</style>
+
+.weight-row{display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:1px solid rgba(150,180,210,.08)}
+.weight-row:last-child{border:0}.delta-down{color:#7fe2be;font-weight:800}.delta-up{color:#ff9a9a;font-weight:800}
+
 </head>
 <body>
 <div class="app">
@@ -41,9 +44,15 @@ section{padding:0 16px}.card{background:rgba(15,28,45,.78);border:1px solid rgba
 <div id="today" class="page active">
 <section>
 <div class="card priority"><div class="label">Priorité absolue</div><p id="priority">Prendre mes 3 cachets</p></div>
-<div class="card"><div class="label">Forme</div>
-<div class="weight"><b>118</b><span>kg</span></div><div class="target">Objectif <b>108 kg</b> · −10 kg</div>
-<div class="bar"><i id="weightbar"></i></div></div>
+<div class="card"><div class="label">Forme · pesée toutes les 2 semaines</div>
+<div class="weight"><b id="currentWeight">118</b><span>kg</span></div>
+<div class="target">Objectif <b>108 kg</b> · −10 kg</div>
+<div class="bar"><i id="weightbar"></i></div>
+<div id="weighingInfo" class="muted small" style="margin-top:10px"></div>
+<div class="inputrow"><input id="weightInput" type="number" min="50" max="250" step="0.1" placeholder="Ex. 117,4 kg"><button class="btn primary" onclick="saveWeight()">Enregistrer</button></div>
+<div id="weightError" class="small" style="color:#ff9a9a;margin-top:7px"></div>
+</div>
+<div class="card"><div class="label">Historique du poids</div><div id="weightHistory"></div></div>
 <div class="stats"><div class="stat"><strong id="streak">0</strong><span>jours d'affilée</span></div><div class="stat"><strong id="gym">0</strong><span>cardio</span></div><div class="stat"><strong id="walk">0</strong><span>marche</span></div></div>
 <div class="card" style="margin-top:14px"><div class="label">Aujourd’hui</div><div id="daily"></div></div>
 <div class="card"><div class="label">Travaux en cours</div><div id="workMini"></div></div>
@@ -58,7 +67,9 @@ section{padding:0 16px}.card{background:rgba(15,28,45,.78);border:1px solid rgba
 
 <div id="reminders" class="page"><section>
 <div class="row" style="margin:8px 2px 14px"><div><div class="label">Rappels</div><div class="muted small">Calendrier + tâches du jour</div></div></div>
-<div class="card"><div id="calendar"><div class="empty">Connexion Google Calendar à activer pour afficher les événements réels.</div></div></div>
+<div class="card"><div class="label">Google Calendar</div>
+<div id="calendar"><div class="empty">La synchronisation réelle nécessite l'autorisation Google Calendar. Le bouton ci-dessous est prêt pour la connexion OAuth.</div>
+<button class="btn primary" style="width:100%;margin-top:4px" onclick="connectGoogle()">🔗 Connecter Google Calendar</button></div></div>
 <div class="card"><div class="label">Tâches du jour</div><div id="todayTasks"></div></div>
 </section></div>
 
@@ -79,7 +90,8 @@ section{padding:0 16px}.card{background:rgba(15,28,45,.78);border:1px solid rgba
 
 <script>
 const KEY='ma_vie_final_v1';
-let data=JSON.parse(localStorage.getItem(KEY)||'{"works":[{"name":"Porte de garage","icon":"🚪","status":"prep"},{"name":"Jardin","icon":"🌳","status":"prep"},{"name":"Chambre Chloé","icon":"💡","status":"prep"}],"history":[],"checks":{},"stats":{"gym":0,"walk":0,"guitar":0,"streak":0}}');
+let data=JSON.parse(localStorage.getItem(KEY)||'{"works":[{"name":"Porte de garage","icon":"🚪","status":"prep"},{"name":"Jardin","icon":"🌳","status":"prep"},{"name":"Chambre Chloé","icon":"💡","status":"prep"}],"history":[],"checks":{},"stats":{"gym":0,"walk":0,"guitar":0,"streak":0},"weights":[{"date":"2026-11-03","value":118}]}');
+data.weights = Array.isArray(data.weights) ? data.weights : [{date:"2026-11-03",value:118}];
 const save=()=>localStorage.setItem(KEY,JSON.stringify(data));
 function dateFR(){return new Intl.DateTimeFormat('fr-FR',{weekday:'long',day:'numeric',month:'long',year:'numeric'}).format(new Date())}
 document.getElementById('date').textContent=dateFR().replace(/^./,c=>c.toUpperCase());
@@ -93,6 +105,46 @@ function renderWorks(){
 function cycleWork(i){let x=data.works[i]; if(x.status==='prep')x.status='doing'; else {x.status='done';data.history.push({...x,date:new Intl.DateTimeFormat('fr-FR').format(new Date())});data.works.splice(i,1)} save();renderWorks();}
 function addWork(){let n=prompt('Nom du travail à ajouter :');if(!n)return;let icon=prompt('Emoji (facultatif) :','🛠');data.works.push({name:n.trim(),icon:icon||'🛠',status:'prep'});save();renderWorks();}
 function esc(s){return s.replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]))}
+
+function weightDateFR(d){return new Intl.DateTimeFormat('fr-FR',{day:'2-digit',month:'2-digit',year:'numeric'}).format(new Date(d+'T12:00:00'))}
+function daysSince(a,b){return Math.floor((new Date(b+'T12:00:00')-new Date(a+'T12:00:00'))/86400000)}
+function canWeigh(){
+ const last=data.weights.length?data.weights[data.weights.length-1]:null;
+ if(!last)return true;
+ const today=new Date().toISOString().slice(0,10);
+ return daysSince(last.date,today)>=14;
+}
+function renderWeight(){
+ const latest=data.weights[data.weights.length-1]||{value:118,date:""};
+ document.getElementById('currentWeight').textContent=latest.value.toLocaleString('fr-FR',{maximumFractionDigits:1});
+ const pct=Math.max(0,Math.min(100,((118-latest.value)/10)*100));
+ document.getElementById('weightbar').style.width=pct+'%';
+ const today=new Date().toISOString().slice(0,10);
+ const allowed=canWeigh();
+ document.getElementById('weighingInfo').textContent=allowed
+   ? 'Pesée autorisée aujourd’hui.'
+   : 'Prochaine pesée le '+weightDateFR(new Date(new Date(latest.date+'T12:00:00').getTime()+14*86400000).toISOString().slice(0,10))+'.';
+ document.getElementById('weightInput').disabled=!allowed;
+ document.getElementById('weightInput').style.opacity=allowed?'1':'.5';
+ const h=data.weights.slice().reverse();
+ document.getElementById('weightHistory').innerHTML=h.length?h.map((x,i)=>{
+   const prev=h[i+1];
+   let delta='';
+   if(prev){const d=x.value-prev.value;delta=`<span class="${d<=0?'delta-down':'delta-up'}">${d>0?'+':''}${d.toLocaleString('fr-FR',{maximumFractionDigits:1})} kg</span>`}
+   return `<div class="weight-row"><span><b>${x.value.toLocaleString('fr-FR',{maximumFractionDigits:1})} kg</b><small class="muted"> · ${weightDateFR(x.date)}</small></span>${delta}</div>`
+ }).join(''):'<div class="empty">Aucune pesée enregistrée.</div>';
+}
+function saveWeight(){
+ const err=document.getElementById('weightError'); err.textContent='';
+ if(!canWeigh()){err.textContent='La pesée est limitée à une fois tous les 14 jours.';return;}
+ const raw=document.getElementById('weightInput').value.replace(',','.');
+ const value=Number(raw);
+ if(!value || value<50 || value>250){err.textContent='Entre un poids valide (50 à 250 kg).';return;}
+ const today=new Date().toISOString().slice(0,10);
+ data.weights.push({date:today,value:Number(value.toFixed(1))});
+ data.weights.sort((a,b)=>a.date.localeCompare(b.date));
+ save();document.getElementById('weightInput').value='';renderWeight();
+}
 function renderDaily(){
  let d=new Date().toISOString().slice(0,10);let c=data.checks[d]||{};
  const items=[['💊','Prendre mes 3 cachets','med'],['🚴','Cardio / Basic-Fit','gym'],['🚶','Marche 1 h','walk'],['🎸','Guitare 30–60 min','guitar'],['🧠','Culture / apprentissage','culture'],['🔎','Remise en question — 5 min','reflect']];
@@ -101,6 +153,10 @@ function renderDaily(){
 }
 function toggle(k){let d=new Date().toISOString().slice(0,10);data.checks[d]=data.checks[d]||{};data.checks[d][k]=!data.checks[d][k];if(k==='gym'&&data.checks[d][k])data.stats.gym++;if(k==='walk'&&data.checks[d][k])data.stats.walk++;if(k==='guitar'&&data.checks[d][k])data.stats.guitar++;save();renderDaily();document.getElementById('gym').textContent=data.stats.gym;document.getElementById('walk').textContent=data.stats.walk;document.getElementById('g2').textContent=data.stats.gym;document.getElementById('gu2').textContent=data.stats.guitar;}
 document.querySelectorAll('.tab').forEach(b=>b.onclick=()=>{document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));document.querySelectorAll('.page').forEach(x=>x.classList.remove('active'));b.classList.add('active');document.getElementById(b.dataset.page).classList.add('active')});
-renderWorks();renderDaily();document.getElementById('streak').textContent=data.stats.streak;document.getElementById('gym').textContent=data.stats.gym;document.getElementById('walk').textContent=data.stats.walk;document.getElementById('g2').textContent=data.stats.gym;document.getElementById('gu2').textContent=data.stats.guitar;
+renderWorks();renderDaily();renderWeight();document.getElementById('streak').textContent=data.stats.streak;document.getElementById('gym').textContent=data.stats.gym;document.getElementById('walk').textContent=data.stats.walk;document.getElementById('g2').textContent=data.stats.gym;document.getElementById('gu2').textContent=data.stats.guitar;
+
+function connectGoogle(){
+ alert("La connexion Google Calendar nécessite une clé OAuth Google (Client ID) propre à cette application. La prochaine étape consiste à configurer cette autorisation ; je ne vais pas simuler une connexion qui ne fonctionne pas.");
+}
 </script>
 </body></html>
