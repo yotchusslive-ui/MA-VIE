@@ -1,19 +1,14 @@
-# MA VIE — V2.1 STABLE
+# MA VIE V2.2
 
-Correctifs :
-- écran noir corrigé avec un JavaScript simplifié et robuste ;
-- saisie du poids une fois tous les 14 jours ;
-- historique du poids ;
-- objectifs par étapes de 4 kg ;
-- objectif final 108 kg ;
-- une nouvelle étape se débloque automatiquement à chaque palier ;
-- travaux : Préparation → En cours → Terminé ;
-- travaux terminés dans l'historique.
+Version reconstruite sans dépendance externe.
+- interface sombre moderne
+- poids toutes les 2 semaines
+- étapes de poids de 4 kg
+- historique des pesées
+- travaux : Préparation / En cours / Terminé
+- ajout de travaux
+- historique des travaux
+- tâches quotidiennes
+- onglet Rappels réservé à Google Calendar
 
-Exemple de progression :
-118 → 114 → 110 → 106 → 102 → 98…
-
-Google Calendar reste à connecter séparément via OAuth ; aucun faux rendez-vous n'est généré.
-
-Installation :
-remplacer index.html dans GitHub puis commit. Pas besoin de réinstaller la PWA sur le téléphone.
+Déploiement GitHub Pages : remplacer uniquement `index.html` à la racine de `main`, puis attendre le déploiement.
