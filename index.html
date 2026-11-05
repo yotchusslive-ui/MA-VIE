@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#111827">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>MA VIE</title>
+<link rel="manifest" href="manifest.webmanifest">
+<style>
+*{box-sizing:border-box}body{margin:0;background:#f4f5f7;color:#111827;font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+.app{max-width:520px;margin:auto;padding:16px 15px 42px}.hero{background:#111827;color:#fff;border-radius:24px;padding:22px 20px;box-shadow:0 10px 30px #0002}
+.brand{font-size:30px;font-weight:900;letter-spacing:-1px}.date{text-transform:capitalize;font-weight:700;margin-top:4px}.status{margin-top:13px;font-weight:800;font-size:15px}
+.card{background:#fff;border-radius:20px;margin-top:14px;padding:18px;box-shadow:0 4px 18px #00000012}.section{font-size:13px;font-weight:900;letter-spacing:.06em;text-transform:uppercase;color:#6b7280;margin-bottom:12px}
+.weight{font-size:39px;font-weight:950;line-height:1}.goal{color:#6b7280;margin-top:5px}.bar{height:12px;background:#e5e7eb;border-radius:20px;overflow:hidden;margin:15px 0 8px}.fill{height:100%;width:0;background:#111827;border-radius:20px}.weightrow{display:flex;justify-content:space-between;align-items:end}.small{font-size:12px;color:#6b7280}.series{font-size:34px;font-weight:950}.quote{font-size:15px;font-weight:700;line-height:1.35;margin-top:5px}
+.stats{display:grid;grid-template-columns:1fr 1fr;gap:10px}.stat{background:#f7f7f8;border-radius:15px;padding:12px}.stat b{display:block;font-size:21px}.stat span{font-size:12px;color:#6b7280}
+button{border:0;background:#111827;color:#fff;border-radius:13px;padding:12px 15px;font-weight:850;font-size:14px}.secondary{background:#eef0f3;color:#111827}.full{width:100%}
+.task{display:flex;gap:11px;align-items:flex-start;padding:12px 0;border-bottom:1px solid #e5e7eb}.task:last-child{border:0}.task input{width:22px;height:22px;margin-top:1px}.time{display:inline-block;min-width:58px;font-weight:900}.task.done label{text-decoration:line-through;color:#9ca3af}
+.nav{display:flex;gap:8px;margin-top:14px}.nav button{flex:1}.hidden{display:none}
+.row{display:flex;justify-content:space-between;gap:10px;align-items:center}.value{font-size:22px;font-weight:900}.danger{color:#b91c1c}
+</style>
+</head>
+<body>
+<div class="app">
+<header class="hero">
+<div class="brand">MA VIE</div>
+<div id="date" class="date"></div>
+<div id="status" class="status"></div>
+</header>
+
+<section class="card">
+<div class="section">Mon bilan</div>
+<div class="weightrow"><div><div id="weight" class="weight">118 kg</div><div class="goal">Objectif 1 : <b>108 kg</b></div></div><button class="secondary" onclick="changeWeight()">Modifier</button></div>
+<div class="bar"><div id="weightFill" class="fill"></div></div>
+<div id="weightText" class="small"></div>
+</section>
+
+<section class="card">
+<div class="section">Ma série</div>
+<div class="series">🔥 <span id="streak">0</span> jours</div>
+<div id="quote" class="quote"></div>
+</section>
+
+<section class="card">
+<div class="section">Mes indicateurs</div>
+<div class="stats">
+<div class="stat"><b id="sport">0</b><span>🚴 séances cardio</span></div>
+<div class="stat"><b id="walk">0</b><span>🚶 jours de marche</span></div>
+<div class="stat"><b id="guitar">0</b><span>🎸 jours guitare</span></div>
+<div class="stat"><b id="culture">0</b><span>📚 jours culture</span></div>
+</div>
+</section>
+
+<section class="card">
+<div class="section">Aujourd'hui</div>
+<div id="tasks"></div>
+</section>
+
+<section class="card">
+<div class="section">Priorité</div>
+<div id="priority" class="value"></div>
+</section>
+
+<section class="card">
+<div class="section">Bilan</div>
+<div class="row"><span>Prochaine pesée</span><b id="nextWeigh"></b></div>
+<div style="height:10px"></div>
+<button class="full secondary" onclick="showHow()">Comment fonctionne MA VIE ?</button>
+</section>
+
+<div id="help" class="card hidden">
+<div class="section">Règles</div>
+<p>💊 Les 3 cachets sont toujours en première ligne.</p>
+<p>👮 18h30 → 06h38 = service de nuit : aucun sport programmé pendant le service.</p>
+<p>🚴 Basic-Fit = vélo cardio, pas de programme de prise de masse.</p>
+<p>🚶 Le tapis est une marche tranquille, idéalement avec la télévision, quand tu es à la maison.</p>
+<p>⚖️ La pesée de référence se fait tous les 15 jours.</p>
+<button class="secondary" onclick="showHow()">Fermer</button>
+</div>
+</div>
+
+<script>
+const START='2026-11-05', GOAL=108;
+const plan={
+"2026-11-05":{s:"🔴 JE TRAVAILLE — 18h30 → 06h38",p:"Arriver au service reposé.",t:[["13:00","Déjeuner"],["13:45","📚 Culture — 30 min"],["14:30","🎸 Guitare — 30 min"],["15:15","Temps libre / famille"],["16:30","Préparation du service"],["18:30","👮 Service de nuit — 06h38"]]},
+"2026-11-06":{s:"🔴 JE TRAVAILLE — 18h30 → 06h38",p:"Tenir le rythme sans surcharge.",t:[["13:00","Déjeuner"],["13:45","📚 Culture — 30 min"],["14:30","🎸 Guitare — 30 min"],["15:15","Temps libre / famille"],["16:30","Préparation du service"],["18:30","👮 Service de nuit — 06h38"]]},
+"2026-11-07":{s:"🟢 JE SUIS EN REPOS",p:"Faire une journée utile sans la remplir.",t:[["09:00","Réveil + petit-déjeuner"],["10:00","🏠 Tâche maison"],["11:00","Temps libre / famille"],["13:00","🚴 Basic-Fit — vélo cardio"],["15:00","Déjeuner / récupération"],["16:00","🎸 Guitare — 30 à 60 min"],["17:00","📚 Culture — 30 min"],["20:00","🚶 Tapis + TV — 1 h"]]},
+"2026-11-08":{s:"🟢 JE SUIS EN REPOS",p:"Récupération active et continuité.",t:[["09:30","Réveil tranquille"],["10:30","🏠 Tâche maison"],["12:30","Déjeuner"],["14:00","🎸 Guitare — 30 à 60 min"],["15:00","📚 Culture — 30 min"],["16:00","Temps libre / famille"],["20:00","🚶 Tapis + TV — 1 h"]]},
+"2026-11-09":{s:"🟢 JE SUIS EN REPOS",p:"Cardio + préparation de la reprise.",t:[["09:00","Réveil + petit-déjeuner"],["10:00","🏠 Tâche maison"],["11:00","Temps libre / famille"],["13:00","🚴 Basic-Fit — vélo cardio"],["15:00","Déjeuner / récupération"],["16:00","🎸 Guitare — 30 min"],["17:00","📚 Culture — 30 min"],["20:00","🚶 Tapis + TV — 1 h"]]},
+"2026-11-10":{s:"🔴 JE TRAVAILLE — 18h30 → 06h38",p:"Reprise : sommeil, simplicité, service.",t:[["13:00","Réveil / repas"],["13:45","🎸 Guitare — 30 min"],["14:30","📚 Culture — 30 min"],["15:15","Temps libre / famille"],["16:30","Préparation du service"],["18:30","👮 Service de nuit — 06h38"]]},
+"2026-11-11":{s:"🔴 JE TRAVAILLE — 18h30 → 06h38",p:"Préserver la récupération.",t:[["13:00","Réveil / repas"],["13:45","🎸 Guitare — 30 min"],["14:30","📚 Culture — 30 min"],["15:15","Temps libre / famille"],["16:30","Préparation du service"],["18:30","👮 Service de nuit — 06h38"]]},
+"2026-11-12":{s:"🟢 JE SUIS EN REPOS",p:"Descente de nuit : récupérer.",t:[["13:00","Réveil / repas"],["14:00","Récupération"],["15:00","🏠 Tâche maison légère"],["16:00","🎸 Guitare — 30 min"],["17:00","📚 Culture — 30 min"],["20:00","🚶 Tapis + TV — 1 h"]]},
+"2026-11-13":{s:"🟢 JE SUIS EN REPOS",p:"Cardio + maison.",t:[["09:30","Réveil + petit-déjeuner"],["10:30","🏠 Tâche maison"],["13:00","🚴 Basic-Fit — vélo cardio"],["15:00","Déjeuner / récupération"],["16:00","🎸 Guitare — 30 min"],["17:00","📚 Culture — 30 min"],["20:00","🚶 Tapis + TV — 1 h"]]},
+"2026-11-14":{s:"🔴 JE TRAVAILLE — 18h30 → 06h38",p:"Avant le service : calme et récupération.",t:[["13:00","Réveil / repas"],["13:45","🎸 Guitare — 30 min"],["14:30","📚 Culture — 30 min"],["15:15","Temps libre / famille"],["16:30","Préparation du service"],["18:30","👮 Service de nuit — 06h38"]]},
+"2026-11-15":{s:"🔴 JE TRAVAILLE — 18h30 → 06h38",p:"Service : aucun sport.",t:[["13:00","Réveil / repas"],["13:45","🎸 Guitare — 30 min"],["14:30","📚 Culture — 30 min"],["15:15","Temps libre / famille"],["16:30","Préparation du service"],["18:30","👮 Service de nuit — 06h38"]]},
+"2026-11-16":{s:"🔴 JE TRAVAILLE — 18h30 → 06h38",p:"Fin de séquence : préserver l'énergie.",t:[["13:00","Réveil / repas"],["13:45","🎸 Guitare — 30 min"],["14:30","📚 Culture — 30 min"],["15:15","Temps libre / famille"],["16:30","Préparation du service"],["18:30","👮 Service de nuit — 06h38"]]},
+"2026-11-17":{s:"🟢 JE SUIS EN REPOS",p:"Descente de nuit : récupération.",t:[["13:00","Réveil / repas"],["14:00","Récupération"],["15:00","🏠 Tâche maison légère"],["16:00","🎸 Guitare — 30 min"],["17:00","📚 Culture — 30 min"],["20:00","🚶 Tapis + TV — 1 h"]]},
+"2026-11-18":{s:"🟢 JE SUIS EN REPOS",p:"Cardio + progression.",t:[["09:30","Réveil + petit-déjeuner"],["10:30","🏠 Tâche maison"],["13:00","🚴 Basic-Fit — vélo cardio"],["15:00","Déjeuner / récupération"],["16:00","🎸 Guitare — 30 min"],["17:00","📚 Culture — 30 min"],["20:00","🚶 Tapis + TV — 1 h"]]},
+"2026-11-19":{s:"🔴 JE TRAVAILLE — 18h30 → 06h38",p:"Reprise : sommeil et discipline.",t:[["13:00","Réveil / repas"],["13:45","🎸 Guitare — 30 min"],["14:30","📚 Culture — 30 min"],["15:15","Temps libre / famille"],["16:30","Préparation du service"],["18:30","👮 Service de nuit — 06h38"]]},
+"2026-11-20":{s:"🔴 JE TRAVAILLE — 18h30 → 06h38",p:"Tenir le cadre.",t:[["13:00","Réveil / repas"],["13:45","🎸 Guitare — 30 min"],["14:30","📚 Culture — 30 min"],["15:15","Temps libre / famille"],["16:30","Préparation du service"],["18:30","👮 Service de nuit — 06h38"]]},
+"2026-11-21":{s:"🟢 JE SUIS EN REPOS",p:"Récupération + maison.",t:[["13:00","Réveil / repas"],["14:00","Récupération"],["15:00","🏠 Tâche maison"],["16:00","🎸 Guitare — 30 min"],["17:00","📚 Culture — 30 min"],["20:00","🚶 Tapis + TV — 1 h"]]},
+"2026-11-22":{s:"🟢 JE SUIS EN REPOS",p:"Cardio + préparation du bilan.",t:[["09:30","Réveil + petit-déjeuner"],["10:30","🏠 Tâche maison"],["13:00","🚴 Basic-Fit — vélo cardio"],["15:00","Déjeuner / récupération"],["16:00","🎸 Guitare — 30 min"],["17:00","📚 Culture — 30 min"],["20:00","🚶 Tapis + TV — 1 h"]]},
+"2026-11-23":{s:"🟢 JE SUIS EN REPOS",p:"Bilan des 15 jours + pesée.",t:[["09:00","⚖️ Pesée — bilan 15 jours"],["10:00","🏠 Tâche maison"],["13:00","🚴 Basic-Fit — vélo cardio"],["15:00","🧠 Bilan MA VIE — 15 min"],["16:00","🎸 Guitare — 30 min"],["17:00","📚 Culture — 30 min"],["20:00","🚶 Tapis + TV — 1 h"]]},
+"2026-11-24":{s:"🔴 JE TRAVAILLE — 18h30 → 06h38",p:"Nouveau cycle : appliquer les corrections.",t:[["13:00","Réveil / repas"],["13:45","🎸 Guitare — 30 min"],["14:30","📚 Culture — 30 min"],["15:15","Temps libre / famille"],["16:30","Préparation du service"],["18:30","👮 Service de nuit — 06h38"]]}
+};
+function dateKey(d){return d.toISOString().slice(0,10)}
+function getDay(){return plan[dateKey(new Date())]||{s:"🟢 JOUR LIBRE",p:"Exécuter les fondamentaux.",t:[["09:00","Réveil + petit-déjeuner"],["10:00","🏠 Tâche maison"],["13:00","🚴 Basic-Fit — vélo cardio"],["16:00","🎸 Guitare — 30 min"],["17:00","📚 Culture — 30 min"],["20:00","🚶 Tapis + TV — 1 h"]]}}
+function dayStore(){return JSON.parse(localStorage.getItem('mv-'+dateKey(new Date()))||'{}')}
+function save(o){localStorage.setItem('mv-'+dateKey(new Date()),JSON.stringify(o))}
+function render(){
+ const d=getDay(), st=dayStore(); document.getElementById('date').textContent=new Intl.DateTimeFormat('fr-FR',{weekday:'long',day:'numeric',month:'long',year:'numeric'}).format(new Date()); document.getElementById('status').textContent=d.s; document.getElementById('priority').textContent=d.p;
+ let all=[['meds','💊','Prendre mes 3 cachets'],...d.t.map((x,i)=>['t'+i,x[0],x[1]])]; let box=document.getElementById('tasks'); box.innerHTML='';
+ all.forEach(([id,time,label])=>{let r=document.createElement('div');r.className='task '+(st[id]?'done':'');r.innerHTML=`<input type="checkbox" ${st[id]?'checked':''}><label><span class="time">${time}</span>${label}</label>`;r.querySelector('input').onchange=e=>{let s=dayStore();s[id]=e.target.checked;save(s);render()};box.appendChild(r)});
+ updateStats(); updateWeight(); updateStreak();
+}
+function updateWeight(){let w=Number(localStorage.getItem('mv-weight')||118), pct=Math.max(0,Math.min(100,(118-w)/(118-GOAL)*100));document.getElementById('weight').textContent=w+' kg';document.getElementById('weightFill').style.width=pct+'%';document.getElementById('weightText').textContent=(w>GOAL?(w-GOAL).toFixed(1)+' kg restant(s) pour atteindre 108 kg': 'Objectif atteint.');}
+function changeWeight(){let w=prompt('Ton poids actuel en kg ?',localStorage.getItem('mv-weight')||118);if(w!==null&&Number(w)>0){localStorage.setItem('mv-weight',Number(w));render()}}
+function updateStats(){let vals={sport:0,walk:0,guitar:0,culture:0};Object.keys(localStorage).filter(k=>k.startsWith('mv-20')).forEach(k=>{let o=JSON.parse(localStorage.getItem(k)||'{}');if(o.t0||Object.values(o).some(v=>v)){}});document.getElementById('sport').textContent=localStorage.getItem('mv-sport')||0;document.getElementById('walk').textContent=localStorage.getItem('mv-walk')||0;document.getElementById('guitar').textContent=localStorage.getItem('mv-guitar')||0;document.getElementById('culture').textContent=localStorage.getItem('mv-culture')||0}
+function updateStreak(){let n=0,d=new Date();for(;;){let o=JSON.parse(localStorage.getItem('mv-'+dateKey(d))||'{}');if(Object.keys(o).length===0)break;n++;d.setDate(d.getDate()-1);if(n>365)break}document.getElementById('streak').textContent=n;let q=n===0?'On commence aujourd’hui.':n<7?'La régularité se construit maintenant.':n<15?'Tu es en train de créer une vraie routine.':n<30?'Premier cycle solide. On continue.':'La constance commence à payer.';document.getElementById('quote').textContent=q}
+function showHow(){document.getElementById('help').classList.toggle('hidden')}
+render();
+</script>
+</body></html>
